@@ -43,6 +43,15 @@ public class OrderInfoDto implements Serializable{
     private String shareNickName;//分享人昵称
     private Boolean shareFlag;//是否结算过佣金
 
+    private Boolean exportFlag = false;//是否导出报表
+
+    public Boolean getExportFlag() {
+        return exportFlag;
+    }
+
+    public void setExportFlag(Boolean exportFlag) {
+        this.exportFlag = exportFlag;
+    }
     public String getShareNickName() {
         return shareNickName;
     }

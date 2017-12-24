@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.svlada.common.request.CustomResponseBuilder.fail;
 import static com.svlada.common.request.CustomResponseBuilder.success;
@@ -58,7 +59,7 @@ public class UserEndpoint {
         result.put("username", user.getUsername());
         result.put("nickName", user.getNickName());
         result.put("balance", user.getBalance());
-        result.put("member", user.getMember()==null?false:true);
+        result.put("member", user.getMember() == null ? false : true);
         result.put("mobile", user.getMobile());
         result.put("sex", user.getSex());
         result.put("headImageUrl", user.getHeadImgUrl());
@@ -108,27 +109,27 @@ public class UserEndpoint {
         User user = WebUtil.getCurrentUser();
         Partner shareToMe = partnerRepository.findFirstByUserId(user.getId());//分享给我的人
         List<Partner> partners = partnerRepository.findAllByShareUserId(user.getId());//我分享出去的人
-        List<Map<String, String>> meShareTo= new ArrayList<>();
+        List<Map<String, String>> meShareTo = new ArrayList<>();
         for (Partner each : partners) {
             User part = userRepository.findOne(each.getUserId());
-            if (part!=null){
+            if (part != null) {
                 partner = new HashMap<>();
                 partner.put("nickName", part.getNickName());
                 meShareTo.add(partner);
-            }else {
+            } else {
                 LOGGER.info("数据异常！{}", each.getUserId());
             }
 
         }
-        result.put("meShareTo",meShareTo);
-        if (shareToMe!=null){
-            if (shareToMe.getShareUser()!=null){
-                result.put("shareToMe",shareToMe.getShareUser().getNickName());
-            }else {
+        result.put("meShareTo", meShareTo);
+        if (shareToMe != null) {
+            if (shareToMe.getShareUser() != null) {
+                result.put("shareToMe", shareToMe.getShareUser().getNickName());
+            } else {
                 LOGGER.error("数据异常！分享给我的人用户不存在!Partner记录ID:{}", shareToMe.getId());
             }
-        }else {
-            result.put("shareToMe",null);
+        } else {
+            result.put("shareToMe", null);
             LOGGER.info("该用户非会员分享登陆！");
         }
         LOGGER.info("该用户的合作伙伴和分享人：有{}", result);
@@ -172,14 +173,41 @@ public class UserEndpoint {
      */
     @GetMapping("/list/partnerOrder")
     public CustomResponse partnerOrder() {
-        User user = WebUtil.getCurrentUser();
+        User currentUser = WebUtil.getCurrentUser();
         Map<String, Object> result = new HashMap<>();
-        result.put("isMember", user.getMember());
-        if (user!=null && user.getMember()!=null && user.getMember()==true){
-            List<Order> orders = orderRepository.findByShareIdAndPayStatus(user.getOpenId(), pay_status_success);
+        result.put("isMember", currentUser.getMember());
+        if (currentUser != null && currentUser.getMember() != null && currentUser.getMember() == true) {
+            List<Order> orders = orderRepository.findByShareIdAndPayStatus(currentUser.getOpenId(), pay_status_success);
+            List<OrderInfoDto> orderInfoDtos =orders.stream().map(entity -> {
+                OrderInfoDto orderInfoDto = new OrderInfoDto();
+                orderInfoDto.setBody(entity.getBody());
+                orderInfoDto.setDetails(entity.getDetails());
+                orderInfoDto.setId(entity.getId());
+                orderInfoDto.setOutTradeNo(entity.getOutTradeNo());
+                orderInfoDto.setPaymentDate(DateUtils.getFormatDate(entity.getPaymentDate(), DateUtils.FULL_DATE_FORMAT));
+                orderInfoDto.setPayStatus(entity.getPayStatus());
+                orderInfoDto.setTotalMoney(entity.getTotalMoney());
+                orderInfoDto.setShareFlag(entity.getShareFlag());//是否已结算
+                if (entity.getWxpayNotify() != null) {
+                    orderInfoDto.setTransactionId(entity.getWxpayNotify().getTransactionId());
+                }
+                User user = entity.getUser();
+                if (user != null) {
+                    orderInfoDto.setNickName(user.getNickName());
+                    orderInfoDto.setOpenId(user.getOpenId());
+                }
+                if (!StringUtils.isEmpty(entity.getShareId())) {//有分享人则有佣金显示
+                    User shareUser = userRepository.findOneByOpenId(entity.getShareId());
+                    if (shareUser != null) {
+                        orderInfoDto.setShareNickName(shareUser.getNickName());
+                    }
+                    orderInfoDto.setShareFlag(entity.getShareFlag());
+                }
+                return orderInfoDto;
+            }).collect(Collectors.toList());
             Long totalMoney = 0L;
             for (Order order : orders) {
-                if (!order.getShareFlag()){//未结算过佣金的订单
+                if (!order.getShareFlag()) {//未结算过佣金的订单
                     totalMoney += order.getTotalMoney();
                 }
             }
@@ -189,7 +217,8 @@ public class UserEndpoint {
             Double chargeDouble = totalMoney * 0.09;
             Integer charge = chargeDouble.intValue();
             result.put("charge", charge);
-        }else {
+            result.put("orderInfoDtos",orderInfoDtos);
+        } else {
             result.put("number", 0);
             result.put("totalMoney", 0);
             result.put("charge", 0);

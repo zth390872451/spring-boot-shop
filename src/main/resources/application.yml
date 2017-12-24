@@ -13,7 +13,7 @@ spring:
   datasource: #数据源的配置
     url: jdbc:mysql://120.77.215.74:3306/weixin_dev?useUnicode=true&characterEncoding=UTF-8
     username: root
-    password: test
+    password: 123
   mvc:
         static-path-pattern: /**
   resources:

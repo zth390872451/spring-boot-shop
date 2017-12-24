@@ -5,10 +5,15 @@ import com.svlada.common.utils.DateUtils;
 import com.svlada.component.repository.OrderRepository;
 import com.svlada.component.repository.OrderShipRepository;
 import com.svlada.component.repository.UserRepository;
-import com.svlada.endpoint.dto.*;
+import com.svlada.component.service.ExportOrderService;
+import com.svlada.endpoint.dto.OrderExportDto;
+import com.svlada.endpoint.dto.OrderExportInfoDto;
+import com.svlada.endpoint.dto.OrderInfoDto;
+import com.svlada.endpoint.dto.OrderSearchDto;
 import com.svlada.entity.Order;
 import com.svlada.entity.OrderShip;
 import com.svlada.entity.User;
+import com.svlada.entity.WxpayNotify;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -25,11 +30,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -85,7 +91,11 @@ public class BackOrderEndpoint {
                 }
                 orderInfoDto.setShareFlag(entity.getShareFlag());
             }
-
+            if (entity.getExport()==null || entity.getExport().equals(0)){
+                orderInfoDto.setExportFlag(false);
+            }else {
+                orderInfoDto.setExportFlag(true);
+            }
             return orderInfoDto;
         });
         return success(dtoPage);
@@ -97,6 +107,8 @@ public class BackOrderEndpoint {
     private UserRepository userRepository;
     @Autowired
     private OrderShipRepository orderShipRepository;
+    @Autowired
+    private ExportOrderService exportOrderService;
 
     @ApiOperation(value = "订单信息列表导出列表", notes = "订单信息列表导出列表")
     @ApiImplicitParams({
@@ -145,8 +157,18 @@ public class BackOrderEndpoint {
             }
             return orderInfoDto;
         }).collect(Collectors.toList());
+        exportOrderService.export(orderList);
         return success(orderInfoDtos);
     }
+
+    @GetMapping(value = "/exportFlag")
+    public CustomResponse exportFlag(@RequestParam(name = "orderCodes", required = true) String orderCodes) {
+        String[] orderIds = orderCodes.split(",");
+        List<String> ids = Arrays.asList(orderIds);
+        exportOrderService.exportOrder(ids);
+        return success();
+    }
+
 
     @GetMapping(value = "/update")
     public CustomResponse update(@RequestParam(name = "orderCodes", required = true) String orderCodes) {
@@ -190,8 +212,8 @@ public class BackOrderEndpoint {
                 this.createIn(predicates,root,cb,"outTradeNo",collection);
             }
             if (!StringUtils.isEmpty(dto.getWechatCode())) {
-                Predicate predicate = cb.equal(root.get("wechatCode").as(String.class), dto.getWechatCode());
-                predicates.add(predicate);
+                Join<Order, WxpayNotify> fuJoin = root.join("wxpayNotify", JoinType.INNER);
+                predicates.add(cb.equal(fuJoin.get("transactionId"),dto.getWechatCode()));
             }
             if (!StringUtils.isEmpty(dto.getStartDate()) && !StringUtils.isEmpty(dto.getEndDate())) {
                 Predicate predicate = cb.between(root.<Date>get("paymentDate"), dto.getStartDate(), dto.getEndDate());
@@ -214,8 +236,8 @@ public class BackOrderEndpoint {
                 predicates.add(predicate);
             }
             if (!StringUtils.isEmpty(orderSearchDto.getWechatCode())) {
-                Predicate predicate = cb.equal(root.get("wechatCode").as(String.class), orderSearchDto.getWechatCode());
-                predicates.add(predicate);
+                Join<Order, WxpayNotify> fuJoin = root.join("wxpayNotify", JoinType.INNER);
+                predicates.add(cb.equal(fuJoin.get("transactionId"),orderSearchDto.getWechatCode()));
             }
             if (!StringUtils.isEmpty(orderSearchDto.getStartDate()) && !StringUtils.isEmpty(orderSearchDto.getStartDate())) {
                 Predicate predicate = cb.between(root.<Date>get("paymentDate"), orderSearchDto.getStartDate(), orderSearchDto.getEndDate());

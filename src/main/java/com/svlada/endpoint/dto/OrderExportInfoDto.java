@@ -75,6 +75,15 @@ public class OrderExportInfoDto implements Serializable{
     @Excel(name = "分享人openId", orderNum = "21", mergeVertical = true, isImportField = "分享人openId")
     private String shareUserOpenId ;
     private Boolean shareFlag;
+    private Boolean exportFlag = false;//是否导出报表
+
+    public Boolean getExportFlag() {
+        return exportFlag;
+    }
+
+    public void setExportFlag(Boolean exportFlag) {
+        this.exportFlag = exportFlag;
+    }
 
     public Boolean getShareFlag() {
         return shareFlag;

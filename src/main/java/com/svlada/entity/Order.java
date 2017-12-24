@@ -68,9 +68,32 @@ public class Order implements Serializable {
     private String shareId;//分享人OpenId
 
     private Boolean shareFlag =false;//佣金是否结算过 false:未计算过
+    @Column(name = "export_flag")
+    private Boolean exportFlag;
 
+    private Integer export;//是否导出报表
     public enum PayType{
         ALIPAY,WEINXIPAY
+    }
+
+    public Boolean getExportFlag() {
+        return exportFlag;
+    }
+
+    public Integer getExport() {
+        return export;
+    }
+
+    public void setExport(Integer export) {
+        this.export = export;
+    }
+
+    public Boolean isExportFlag() {
+        return exportFlag;
+    }
+
+    public void setExportFlag(Boolean exportFlag) {
+        this.exportFlag = exportFlag;
     }
 
     public Boolean getShareFlag() {

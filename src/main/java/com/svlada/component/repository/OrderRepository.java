@@ -23,4 +23,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>  , JpaSpecif
     @Transactional
     @Query(value = "update user_order  set share_flag = ?2 where pay_status =1 and shareId is not null and shareFlag =FALSE and out_trade_no in (?1)",nativeQuery = true)
     void updateShareFlag(List<String> ids, Boolean shareFlag);
+
+    @Modifying
+    @Transactional
+    @Query(value = "update user_order  set export = TRUE where pay_status =1 and  out_trade_no in (?1)",nativeQuery = true)
+    void updateExportFlag(List<String> ids);
 }
