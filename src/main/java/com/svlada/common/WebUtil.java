@@ -131,7 +131,7 @@ public class WebUtil {
                 Partner partner = partnerRepository.findOneByUserIdAndShareUserId(currentUser.getId(),shareUser.getId());
                 Partner exist = partnerRepository.findOneByUserIdAndShareUserId(shareUser.getId(), currentUser.getId());
                 if (partner == null && exist==null ) {//没有，则添加分享人为合作伙伴
-                    if (shareUser.getMember()!=null & shareUser.getMember()){
+                    if (shareUser.getMember()!=null && shareUser.getMember()){
                         LOGGER.info("非合作伙伴关系,则添加分享人为合作伙伴!");
                         partner = new Partner();
                         partner.setShareUser(shareUser);
